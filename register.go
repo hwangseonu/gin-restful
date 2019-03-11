@@ -19,51 +19,53 @@ func Register(e *gin.Engine, resource interface{}) {
 	}
 }
 
-func makeUrl(prefix string, method reflect.Method) (string, []string) {
+func makeUrl(prefix string, method reflect.Method) (string, []reflect.Type) {
 	url := prefix
-	args := make([]string, 0)
-	for i := 1; i < method.Type.NumIn(); i++ {
-		arg := method.Type.In(i).String()
+	args := make([]reflect.Type, 0)
+	numIn := method.Type.NumIn()
+
+	for i := 1; i < numIn; i++ {
+		arg := method.Type.In(i)
 		args = append(args, arg)
-		if arg == "*gin.Context" {
+		if arg.String() == "*gin.Context" {
 			continue
 		}
-		url += "/:"+arg+strconv.Itoa(i)
+		url += "/:"+arg.String()+strconv.Itoa(i)
 	}
 	return url, args
 }
 
-func makeValues(params gin.Params, v reflect.Value, args []string, c *gin.Context) ([]reflect.Value, error) {
-	values := []reflect.Value{v}
+func makeValues(val reflect.Value, args []reflect.Type, c *gin.Context) ([]reflect.Value, error) {
+	values := []reflect.Value{val}
 	for i, v := range args {
-		p := params.ByName(v + strconv.Itoa(i+1))
-		if v == "string" {
+		p := c.Param(v.String() + strconv.Itoa(i+1))
+		if v.String() == "string" {
 			values = append(values, reflect.ValueOf(p))
-		} else if v == "int" {
+		} else if v.String() == "int" {
 			if j, err := strconv.Atoi(p); err != nil {
 				return []reflect.Value{}, ApplicationError{
-					Message: v+strconv.Itoa(i+1) + " is must int",
+					Message: v.String()+strconv.Itoa(i+1) + " is must int",
 					Status: http.StatusBadRequest,
 				}
 			} else {
 				values = append(values, reflect.ValueOf(j))
 			}
-		} else if v == "bool" {
+		} else if v.String() == "bool" {
 			if p == "false" || p == "0" || p == "off" || p == "null" {
 				values = append(values, reflect.ValueOf(false))
 			} else {
 				values = append(values, reflect.ValueOf(true))
 			}
-		} else if v == "*gin.Context" {
+		} else if v.String() == "*gin.Context" {
 			values = append(values, reflect.ValueOf(c))
 		}
 	}
 	return values, nil
 }
 
-func makeFunc(v reflect.Value, method reflect.Method, args []string) func (c *gin.Context){
+func makeFunc(v reflect.Value, method reflect.Method, args []reflect.Type) func (c *gin.Context){
 	return func(c *gin.Context) {
-		values, err := makeValues(c.Params, v, args, c)
+		values, err := makeValues(v, args, c)
 		if err != nil {
 			ae, ok := err.(ApplicationError)
 			status := http.StatusInternalServerError

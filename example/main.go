@@ -10,8 +10,8 @@ type SampleResource struct {
 	Prefix string
 }
 
-func (r SampleResource) Get() (string, int) {
-	return "Hello, World", http.StatusOK
+func (r SampleResource) Get(name string) (string, int) {
+	return name, http.StatusOK
 }
 
 func main() {
