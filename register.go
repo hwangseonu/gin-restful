@@ -25,12 +25,15 @@ func makeUrl(prefix string, method reflect.Method) (string, []string) {
 	for i := 1; i < method.Type.NumIn(); i++ {
 		arg := method.Type.In(i).String()
 		args = append(args, arg)
+		if arg == "*gin.Context" {
+			continue
+		}
 		url += "/:"+arg+strconv.Itoa(i)
 	}
 	return url, args
 }
 
-func makeValues(params gin.Params, v reflect.Value, args []string) ([]reflect.Value, error) {
+func makeValues(params gin.Params, v reflect.Value, args []string, c *gin.Context) ([]reflect.Value, error) {
 	values := []reflect.Value{v}
 	for i, v := range args {
 		p := params.ByName(v + strconv.Itoa(i+1))
@@ -51,6 +54,8 @@ func makeValues(params gin.Params, v reflect.Value, args []string) ([]reflect.Va
 			} else {
 				values = append(values, reflect.ValueOf(true))
 			}
+		} else if v == "*gin.Context" {
+			values = append(values, reflect.ValueOf(c))
 		}
 	}
 	return values, nil
@@ -58,7 +63,7 @@ func makeValues(params gin.Params, v reflect.Value, args []string) ([]reflect.Va
 
 func makeFunc(v reflect.Value, method reflect.Method, args []string) func (c *gin.Context){
 	return func(c *gin.Context) {
-		values, err := makeValues(c.Params, v, args)
+		values, err := makeValues(c.Params, v, args, c)
 		if err != nil {
 			ae, ok := err.(ApplicationError)
 			status := http.StatusInternalServerError
@@ -70,6 +75,10 @@ func makeFunc(v reflect.Value, method reflect.Method, args []string) func (c *gi
 		}
 		returns := method.Func.Call(values)
 		status := http.StatusOK
+		if len(returns) == 0 {
+			c.Status(http.StatusOK)
+			return
+		}
 		if len(returns) == 2 {
 			status = int(returns[1].Int())
 		}
