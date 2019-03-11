@@ -82,6 +82,10 @@ func makeFunc(v reflect.Value, method reflect.Method, args []string) func (c *gi
 		if len(returns) == 2 {
 			status = int(returns[1].Int())
 		}
+		if s, ok := returns[0].Interface().(string); ok {
+			c.String(status, s)
+			return
+		}
 		if _, err := json.Marshal(returns[0].Interface()); err != nil {
 			c.String(status, returns[0].String())
 		} else {

@@ -10,7 +10,7 @@ type SampleResource struct {
 	Prefix string
 }
 
-func (r SampleResource) Get() (string, int) {
+func (r SampleResource) Get() (gin.H, int) {
 	return "Hello, World", http.StatusOK
 }
 
