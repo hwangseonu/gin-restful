@@ -7,16 +7,18 @@ import (
 )
 
 type SampleResource struct {
-	Prefix string
 }
 
-func (r SampleResource) Get(name string) (string, int) {
-	return name, http.StatusOK
+func (r SampleResource) Get(name string, a float64) (gin.H, int) {
+	return gin.H{
+		"name": name,
+		"a": a,
+	}, http.StatusOK
 }
 
 func main() {
 	r := gin.Default()
-	res := SampleResource{Prefix:"/samples"}
-	gin_restful.Register(r, res)
+	v1 := gin_restful.NewApi(r, "/v1")
+	v1.AddResource(SampleResource{}, "/samples")
 	_ = r.Run(":5000")
 }
