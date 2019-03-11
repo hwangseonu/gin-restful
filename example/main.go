@@ -7,19 +7,18 @@ import (
 )
 
 type SampleResource struct {
-	gin_restful.Resource
+	Prefix string
 }
 
 func (r SampleResource) Get(i int, name string) (gin.H, int) {
 	return gin.H{
 		"int": i,
 		"name": name,
-	}, http.StatusNotFound
+	}, http.StatusOK
 }
 
 func main() {
 	r := gin.Default()
-	res := SampleResource{gin_restful.Resource{Prefix:"/samples"}}
-	gin_restful.Register(r, res)
+	gin_restful.Register(r,  SampleResource{Prefix:"/samples"})
 	_ = r.Run(":5000")
 }
