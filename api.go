@@ -124,7 +124,7 @@ func createValues(c *gin.Context, resource reflect.Value, args []string) ([]refl
 		case "int":
 			if num, err := strconv.Atoi(p); err != nil {
 				return []reflect.Value{}, ApplicationError{
-					Message: "argument " + arg + strconv.Itoa(i) + "is must int",
+					Message: "argument " + arg + strconv.Itoa(i) + " is must int",
 					Status:  http.StatusBadRequest,
 				}
 			} else {
