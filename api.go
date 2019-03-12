@@ -93,7 +93,7 @@ func isHttpMethod(name string) bool {
 
 func createUrl(url string, args []string) string {
 	for i, a := range args {
-		if a == "*gin.Context" {
+		if a == "context" {
 			continue
 		}
 		url += "/:" + a + strconv.Itoa(i)
