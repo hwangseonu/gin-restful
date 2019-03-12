@@ -1,54 +1,122 @@
 package gin_restful
 
 import (
+	"encoding/json"
 	"errors"
 	"github.com/gin-gonic/gin"
-	"github.com/gin-gonic/gin/json"
 	"net/http"
 	"reflect"
 	"strconv"
 	"strings"
 )
 
-type Api struct {
-	*gin.Engine
-	Prefix string
+var httpmethods = []string{
+	http.MethodGet,
+	http.MethodPost,
+	http.MethodPatch,
+	http.MethodDelete,
+	http.MethodPut,
+	http.MethodHead,
+	http.MethodConnect,
+	http.MethodOptions,
+	http.MethodTrace,
 }
 
-func NewApi(e *gin.Engine, prefix string) *Api {
+type ResourceTuple struct {
+	Resource interface{}
+	Url      string
+}
+
+type Api struct {
+	App       *gin.RouterGroup
+	Prefix    string
+	Resources []ResourceTuple
+}
+
+func NewApi(app *gin.Engine, prefix string) *Api {
 	return &Api{
-		Engine: e,
-		Prefix: prefix,
+		App:       app.Group(prefix),
+		Prefix:    prefix,
+		Resources: make([]ResourceTuple, 0),
 	}
 }
 
 func (a *Api) AddResource(resource interface{}, url string) {
+	if a.App != nil {
+		a.registerResource(resource, url)
+	} else {
+		a.Resources = append(a.Resources, ResourceTuple{
+			Resource: resource,
+			Url: url,
+		})
+	}
+}
+
+func (a *Api) GetHandlersChain() gin.HandlersChain {
+	result := make([]gin.HandlerFunc, 0)
+	for _, tuple := range a.Resources {
+		resource := tuple.Resource
+		for i := 0; i < reflect.TypeOf(resource).NumMethod(); i++ {
+			value := reflect.ValueOf(resource)
+			method := reflect.TypeOf(resource).Method(i)
+			if !isHttpMethod(method.Name) {
+				continue
+			}
+			args := parseArgs(method)
+			result = append(result, createHandlerFunc(value, method, args))
+		}
+	}
+	return result
+}
+
+func (a *Api) registerResource(resource interface{}, url string) {
 	for i := 0; i < reflect.TypeOf(resource).NumMethod(); i++ {
 		value := reflect.ValueOf(resource)
 		method := reflect.TypeOf(resource).Method(i)
-		url, args := makeUrl(url, method)
-		a.Engine.Handle(strings.ToUpper(method.Name), a.Prefix + url, makeFunc(value, method, args))
+		if !isHttpMethod(method.Name) {
+			continue
+		}
+		args := parseArgs(method)
+		url := createUrl(url, args)
+		a.App.Handle(strings.ToUpper(method.Name), url, createHandlerFunc(value, method, args))
 	}
 }
 
-func makeUrl(url string, method reflect.Method) (string, []string) {
+func isHttpMethod(name string) bool {
+	for _, k := range httpmethods {
+		if strings.ToUpper(name) == k {
+			return true
+		}
+	}
+	return false
+}
+
+func createUrl(url string, args []string) string {
+	for i, a := range args {
+		if a == "*gin.Context" {
+			continue
+		}
+		url += "/:" + a + strconv.Itoa(i)
+	}
+	return url
+}
+
+func parseArgs(method reflect.Method) []string {
 	args := make([]string, 0)
 	for i := 1; i < method.Type.NumIn(); i++ {
 		arg := method.Type.In(i).String()
-		args = append(args, arg)
-		if method.Type.In(i).String() == "*gin.Context" {
+		if arg == "*gin.Context" {
 			arg = "context"
-			continue
 		}
-		url += "/:" + arg + strconv.Itoa(i)
+		args = append(args, arg)
 	}
-	return url, args
+	return args
 }
 
-func makeValues(c *gin.Context, resource reflect.Value, args []string) ([]reflect.Value, error){
+func createValues(c *gin.Context, resource reflect.Value, args []string) ([]reflect.Value, error) {
 	values := []reflect.Value{resource}
 	for i, arg := range args {
-		p := c.Param(arg+strconv.Itoa(i+1))
+		p := c.Param(arg + strconv.Itoa(i))
 		switch arg {
 		case "string":
 			values = append(values, reflect.ValueOf(p))
@@ -90,9 +158,9 @@ func makeValues(c *gin.Context, resource reflect.Value, args []string) ([]reflec
 	return values, nil
 }
 
-func makeFunc(resource reflect.Value, method reflect.Method, args []string) gin.HandlerFunc {
+func createHandlerFunc(resource reflect.Value, method reflect.Method, args []string) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		values, err := makeValues(c, resource, args)
+		values, err := createValues(c, resource, args)
 		if err != nil {
 			ae, ok := err.(ApplicationError)
 			status := http.StatusInternalServerError
