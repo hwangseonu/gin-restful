@@ -1,3 +1,5 @@
+//gin_restful 은 gin 을 이용한 restful api 를 간편하게 만들기 위한 extension 입니다.
+//go 언어로 restful api 를 더 편하게 만들고 싶어 개발하였습니다.
 package gin_restful
 
 import (
@@ -22,20 +24,24 @@ var httpmethods = []string{
 	http.MethodTrace,
 }
 
-//리소스 객체와 URL을 묶어서 사용하기 위한 구조체
+//ResourceUrl 은 Resource 의 인스턴스와 URL 을 묶어서 사용하기 위한 구조체입니다.
 type ResourceUrl struct {
 	Resource interface{}
 	Url      string
 }
 
-//리소스들을 관리하고 서버에 등록하기 위한 API구조체
+//Api 구조체는 Resource 인스턴스들을 관리하고 gin 서버에 등록하기 위한 구조체입니다.
+//NewApi 함수로 인스턴스를 생성하여 사용합니다.
+//AddResource 함수로 Api 인스턴스에 Resource 를 등록할 수 있습니다.
 type Api struct {
 	App       *gin.RouterGroup
 	Prefix    string
 	Resources []ResourceUrl
 }
 
-//API 구조체의 인스턴스를 인스턴스를 생성하는 함수
+//Api 구조체의 인스턴스를 인스턴스를 생성하여 포인터로 반환하는 함수입니다.
+//첫번째 인자 app(type: *gin.Engine)은 Resource 를 등록 할 gin 서버의 인스턴스입니다.
+//두번째 인자 prefix(type string)은 api url 의 제일 앞 부분에 붙습니다.
 func NewApi(app *gin.Engine, prefix string) *Api {
 	return &Api{
 		App:       app.Group(prefix),
@@ -44,7 +50,8 @@ func NewApi(app *gin.Engine, prefix string) *Api {
 	}
 }
 
-//API 인스턴스에 새로운 Resource를 등록하는 메서드
+//Api 인스턴스에 새로운 Resource 를 등록하는 메서드입니다.
+//Api 의 필드 App 이 nil 이 아니라면 gin 서버에 즉시 등록하고 nil 이라면 Api 구조체에 잠시 저장합니다.
 func (a *Api) AddResource(resource interface{}, url string) {
 	if a.App != nil {
 		a.registerResource(resource, url)
@@ -56,7 +63,7 @@ func (a *Api) AddResource(resource interface{}, url string) {
 	}
 }
 
-//API 인스턴스에 등록 된 리소스 핸들러들을 gin.HandlerChain 타입으로 반환하는 메서드
+//Api 인스턴스에 등록된 Resource 의 Handler 들을 gin.HandlerChain 타입으로 반환하는 메서드입니다.
 func (a *Api) GetHandlersChain() gin.HandlersChain {
 	result := make([]gin.HandlerFunc, 0)
 	for _, v := range a.Resources {
@@ -74,7 +81,7 @@ func (a *Api) GetHandlersChain() gin.HandlersChain {
 	return result
 }
 
-//API 에 등록된 리소스를 gin 서버에 등록시키는 메서드
+//Api 인스턴스에 등록된 Resource 를 gin 서버에 등록시키는 메서드입니다.
 func (a *Api) registerResource(resource interface{}, url string) {
 	for i := 0; i < reflect.TypeOf(resource).NumMethod(); i++ {
 		value := reflect.ValueOf(resource)
@@ -92,7 +99,7 @@ func (a *Api) registerResource(resource interface{}, url string) {
 	}
 }
 
-//인자로 받은 메서드 이름이 http 메서드인지 확인하는 함수
+//인자로 받은 메서드 이름이 http 메서드인지 확인하여 bool 로 반환하는 함수입니다.
 func isHttpMethod(name string) bool {
 	for _, k := range httpmethods {
 		if strings.ToUpper(name) == k {
@@ -102,7 +109,7 @@ func isHttpMethod(name string) bool {
 	return false
 }
 
-//리소스에 등록되어 있는 메서드의 인자들을 http url 로 만들어 반환하는 함수
+//Resource 에 등록되어 있는 Handler 의 인자들을 http url 로 파싱하여 반환하는 함수입니다.
 func createUrl(url string, args []string) string {
 	for i, a := range args {
 		if a == "context" {
@@ -113,7 +120,7 @@ func createUrl(url string, args []string) string {
 	return url
 }
 
-//메서드의 인자 타입을 반환하는 함수
+//메서드의 인자 타입들을 문자열 슬라이스로 반환하는 함수입니다.
 func parseArgs(method reflect.Method) []string {
 	args := make([]string, 0)
 	for i := 1; i < method.Type.NumIn(); i++ {
@@ -126,7 +133,7 @@ func parseArgs(method reflect.Method) []string {
 	return args
 }
 
-//인자 타입을 바탕으로 리소스의 메서드를 실행시키기 위한 parameter 를 만드는 함수
+//args(type: []string) 으로 Resource 의 Handler 를 실행시키기 위한 parameter 들을 만드는 함수입니다.
 func createValues(c *gin.Context, resource reflect.Value, args []string) ([]reflect.Value, error) {
 	values := []reflect.Value{resource}
 	for i, arg := range args {
@@ -172,7 +179,7 @@ func createValues(c *gin.Context, resource reflect.Value, args []string) ([]refl
 	return values, nil
 }
 
-//gin 서버에 등록 가능한 handler 함수를 만들어 반환하는 함수
+//gin 서버에 등록 가능한 형태 handler 를 만들어 반환하는 함수입니다.
 func createHandlerFunc(resource reflect.Value, method reflect.Method, args []string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		values, err := createValues(c, resource, args)
@@ -202,7 +209,7 @@ func createHandlerFunc(resource reflect.Value, method reflect.Method, args []str
 	}
 }
 
-//리소스 메서드에 등록된 middleware 들을 반환하는 함수
+//Resource 인스턴스에 등록된 middleware 들을 반환하는 함수입니다.
 func parseMiddlewares(resource interface{}, method string) []gin.HandlerFunc {
 	r := reflect.ValueOf(resource)
 	method = strings.ToUpper(method)
