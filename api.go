@@ -22,7 +22,7 @@ var httpmethods = []string{
 	http.MethodTrace,
 }
 
-type ResourceTuple struct {
+type ResourceUrl struct {
 	Resource interface{}
 	Url      string
 }
@@ -30,14 +30,14 @@ type ResourceTuple struct {
 type Api struct {
 	App       *gin.RouterGroup
 	Prefix    string
-	Resources []ResourceTuple
+	Resources []ResourceUrl
 }
 
 func NewApi(app *gin.Engine, prefix string) *Api {
 	return &Api{
 		App:       app.Group(prefix),
 		Prefix:    prefix,
-		Resources: make([]ResourceTuple, 0),
+		Resources: make([]ResourceUrl, 0),
 	}
 }
 
@@ -45,7 +45,7 @@ func (a *Api) AddResource(resource interface{}, url string) {
 	if a.App != nil {
 		a.registerResource(resource, url)
 	} else {
-		a.Resources = append(a.Resources, ResourceTuple{
+		a.Resources = append(a.Resources, ResourceUrl{
 			Resource: resource,
 			Url: url,
 		})
