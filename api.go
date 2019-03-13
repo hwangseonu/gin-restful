@@ -78,7 +78,11 @@ func (a *Api) registerResource(resource interface{}, url string) {
 		}
 		args := parseArgs(method)
 		url := createUrl(url, args)
-		a.App.Handle(strings.ToUpper(method.Name), url, createHandlerFunc(value, method, args))
+		g := a.App.Group(url)
+		for _, m := range parseMiddlewares(resource, method.Name) {
+			g.Use(m)
+		}
+		g.Handle(strings.ToUpper(method.Name), "", createHandlerFunc(value, method, args))
 	}
 }
 
@@ -185,4 +189,15 @@ func createHandlerFunc(resource reflect.Value, method reflect.Method, args []str
 			c.JSON(status, returns[0].Interface())
 		}
 	}
+}
+
+func parseMiddlewares(resource interface{}, method string) []gin.HandlerFunc {
+	r := reflect.ValueOf(resource)
+	method = strings.ToUpper(method)
+	f := r.FieldByName("Middlewares")
+	if !f.IsValid() {
+		return make([]gin.HandlerFunc, 0)
+	}
+	middlewares := r.FieldByName("Middlewares").Interface().(map[string][]gin.HandlerFunc)
+	return middlewares[method]
 }
