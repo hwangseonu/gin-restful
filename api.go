@@ -22,17 +22,20 @@ var httpmethods = []string{
 	http.MethodTrace,
 }
 
+//리소스 객체와 URL을 묶어서 사용하기 위한 구조체
 type ResourceUrl struct {
 	Resource interface{}
 	Url      string
 }
 
+//리소스들을 관리하고 서버에 등록하기 위한 API구조체
 type Api struct {
 	App       *gin.RouterGroup
 	Prefix    string
 	Resources []ResourceUrl
 }
 
+//API 구조체의 인스턴스를 인스턴스를 생성하는 함수
 func NewApi(app *gin.Engine, prefix string) *Api {
 	return &Api{
 		App:       app.Group(prefix),
@@ -41,6 +44,7 @@ func NewApi(app *gin.Engine, prefix string) *Api {
 	}
 }
 
+//API 인스턴스에 새로운 Resource를 등록하는 메서드
 func (a *Api) AddResource(resource interface{}, url string) {
 	if a.App != nil {
 		a.registerResource(resource, url)
@@ -52,10 +56,11 @@ func (a *Api) AddResource(resource interface{}, url string) {
 	}
 }
 
+//API 인스턴스에 등록 된 리소스 핸들러들을 gin.HandlerChain 타입으로 반환하는 메서드
 func (a *Api) GetHandlersChain() gin.HandlersChain {
 	result := make([]gin.HandlerFunc, 0)
-	for _, tuple := range a.Resources {
-		resource := tuple.Resource
+	for _, v := range a.Resources {
+		resource := v.Resource
 		for i := 0; i < reflect.TypeOf(resource).NumMethod(); i++ {
 			value := reflect.ValueOf(resource)
 			method := reflect.TypeOf(resource).Method(i)
@@ -69,6 +74,7 @@ func (a *Api) GetHandlersChain() gin.HandlersChain {
 	return result
 }
 
+//API 에 등록된 리소스를 gin 서버에 등록시키는 메서드
 func (a *Api) registerResource(resource interface{}, url string) {
 	for i := 0; i < reflect.TypeOf(resource).NumMethod(); i++ {
 		value := reflect.ValueOf(resource)
@@ -86,6 +92,7 @@ func (a *Api) registerResource(resource interface{}, url string) {
 	}
 }
 
+//인자로 받은 메서드 이름이 http 메서드인지 확인하는 함수
 func isHttpMethod(name string) bool {
 	for _, k := range httpmethods {
 		if strings.ToUpper(name) == k {
@@ -95,6 +102,7 @@ func isHttpMethod(name string) bool {
 	return false
 }
 
+//리소스에 등록되어 있는 메서드의 인자들을 http url 로 만들어 반환하는 함수
 func createUrl(url string, args []string) string {
 	for i, a := range args {
 		if a == "context" {
@@ -105,6 +113,7 @@ func createUrl(url string, args []string) string {
 	return url
 }
 
+//메서드의 인자 타입을 반환하는 함수
 func parseArgs(method reflect.Method) []string {
 	args := make([]string, 0)
 	for i := 1; i < method.Type.NumIn(); i++ {
@@ -117,6 +126,7 @@ func parseArgs(method reflect.Method) []string {
 	return args
 }
 
+//인자 타입을 바탕으로 리소스의 메서드를 실행시키기 위한 parameter 를 만드는 함수
 func createValues(c *gin.Context, resource reflect.Value, args []string) ([]reflect.Value, error) {
 	values := []reflect.Value{resource}
 	for i, arg := range args {
@@ -162,6 +172,7 @@ func createValues(c *gin.Context, resource reflect.Value, args []string) ([]refl
 	return values, nil
 }
 
+//gin 서버에 등록 가능한 handler 함수를 만들어 반환하는 함수
 func createHandlerFunc(resource reflect.Value, method reflect.Method, args []string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		values, err := createValues(c, resource, args)
@@ -191,6 +202,7 @@ func createHandlerFunc(resource reflect.Value, method reflect.Method, args []str
 	}
 }
 
+//리소스 메서드에 등록된 middleware 들을 반환하는 함수
 func parseMiddlewares(resource interface{}, method string) []gin.HandlerFunc {
 	r := reflect.ValueOf(resource)
 	method = strings.ToUpper(method)
