@@ -15,7 +15,7 @@ type SampleResource struct {
 
 //Json Body 를 테스트하기 위한 구조체입니다.
 type Data struct {
-	Name string `json:"name"`
+	Name string `json:"name" validate:"required,notblank"`
 }
 
 //SampleResource 의 Url 로 GET 요청이 들어왔을 때 실행되는 Handler 입니다.
