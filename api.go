@@ -78,10 +78,7 @@ func (a *Api) registerResource(resource interface{}, url string) {
 		}
 		args := parseArgs(method)
 		url := createUrl(url, args)
-		g := a.App.Group(url)
-		for _, m := range parseMiddlewares(resource, method.Name) {
-			g.Use(m)
-		}
+		g := a.App.Group(url, parseMiddlewares(resource, method.Name)...)
 		g.Handle(strings.ToUpper(method.Name), "", createHandlerFunc(value, method, args))
 	}
 }
