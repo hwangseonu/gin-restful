@@ -15,6 +15,10 @@ type SampleResource struct {
 	*gin_restful.Resource
 }
 
+type Data struct {
+	Name string `json:"name"`
+}
+
 /*
 	SampleResource 의 Url 로 GET 요청이 들어왔을 때 실행되는 Handler 입니다.
 	gin.H 와 status code 를 반환합니다.
@@ -31,11 +35,7 @@ func (r SampleResource) Get(name string) (gin.H, int) {
 	gin.H 과 status code 를 반환합니다.
     요청으로 받은 payload를 그대로 반환합니다.
  */
-func (r SampleResource) Post(c *gin.Context) (gin.H, int) {
-	json := make(map[string]interface{})
-	if err := c.ShouldBindJSON(&json); err != nil {
-		return gin.H{"message": err.Error()}, 400
-	}
+func (r SampleResource) Post(c *gin.Context, json Data) (Data, int) {
 	return json, 200
 }
 

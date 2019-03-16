@@ -110,23 +110,38 @@ func isHttpMethod(name string) bool {
 }
 
 //Resource 에 등록되어 있는 Handler 의 인자들을 http url 로 파싱하여 반환하는 함수입니다.
-func createUrl(url string, args []string) string {
+func createUrl(url string, args []reflect.Type) string {
 	for i, a := range args {
-		if a == "context" {
+		if a.Kind() == reflect.Struct {
 			continue
 		}
-		url += "/:" + a + strconv.Itoa(i)
+		if a.String() == "*gin.Context" {
+			continue
+		}
+		url += "/:" + a.String() + strconv.Itoa(i)
 	}
 	return url
 }
 
-//메서드의 인자 타입들을 문자열 슬라이스로 반환하는 함수입니다.
-func parseArgs(method reflect.Method) []string {
-	args := make([]string, 0)
+//메서드의 인자 타입들을 슬라이스로 반환하는 함수입니다.
+func parseArgs(method reflect.Method) []reflect.Type {
+	args := make([]reflect.Type, 0)
+	can := []string{"string", "int", "float64", "bool", "*gin.Context"}
+
+	addedStruct := false
 	for i := 1; i < method.Type.NumIn(); i++ {
-		arg := method.Type.In(i).String()
-		if arg == "*gin.Context" {
-			arg = "context"
+		arg := method.Type.In(i)
+		if arg.Kind() == reflect.Struct {
+			if addedStruct {
+				panic(errors.New("method argument can string, int, float64, bool, *gin.Context, one struct"))
+			} else {
+				addedStruct = true
+				args = append(args, arg)
+				continue
+			}
+		}
+		if !contains(can, arg.String()) {
+			panic(errors.New("method argument can string, int, float64, bool, *gin.Context, one struct"))
 		}
 		args = append(args, arg)
 	}
@@ -134,53 +149,76 @@ func parseArgs(method reflect.Method) []string {
 }
 
 //args(type: []string) 으로 Resource 의 Handler 를 실행시키기 위한 parameter 들을 만드는 함수입니다.
-func createValues(c *gin.Context, resource reflect.Value, args []string) ([]reflect.Value, error) {
+func createValues(c *gin.Context, resource reflect.Value, args []reflect.Type) ([]reflect.Value, error) {
 	values := []reflect.Value{resource}
+
 	for i, arg := range args {
-		p := c.Param(arg + strconv.Itoa(i))
-		switch arg {
-		case "string":
+		p := c.Param(arg.String() + strconv.Itoa(i))
+		switch arg.Kind() {
+		case reflect.String:
 			values = append(values, reflect.ValueOf(p))
 			break
-		case "int":
+		case reflect.Int:
 			if num, err := strconv.Atoi(p); err != nil {
 				return []reflect.Value{}, ApplicationError{
-					Message: "argument " + arg + strconv.Itoa(i) + " is must int",
+					Message: "argument " + arg.String() + strconv.Itoa(i) + " is must int",
 					Status:  http.StatusBadRequest,
 				}
 			} else {
 				values = append(values, reflect.ValueOf(num))
 			}
 			break
-		case "float64":
+		case reflect.Float64:
 			if num, err := strconv.ParseFloat(p, 64); err != nil {
 				return []reflect.Value{}, ApplicationError{
-					Message: "argument " + arg + strconv.Itoa(i) + "is must " + arg,
+					Message: "argument " + arg.String() + strconv.Itoa(i) + "is must float64",
 					Status:  http.StatusBadRequest,
 				}
 			} else {
 				values = append(values, reflect.ValueOf(num))
 			}
 			break
-		case "bool":
+		case reflect.Bool:
 			if p == "" || p == "false" || p == "0" || p == "null" || p == "nil" || p == "off" {
 				values = append(values, reflect.ValueOf(false))
 			} else {
 				values = append(values, reflect.ValueOf(true))
 			}
 			break
-		case "context":
-			values = append(values, reflect.ValueOf(c))
+		case reflect.Ptr:
+			if arg.String() == "*gin.Context" {
+				values = append(values, reflect.ValueOf(c))
+			}
+			break
+		case reflect.Struct:
+			body := reflect.New(arg).Elem().Interface()
+			if v, err := JsonRequired(c, body); err != nil {
+				return []reflect.Value{}, ApplicationError{
+					Message: err.Error(),
+					Status: 400,
+				}
+			} else {
+				values = append(values, reflect.ValueOf(v))
+			}
 			break
 		default:
-			panic(errors.New("method argument can string, integer"))
+			panic(errors.New("method argument can string, int, float64, bool, *gin.Context, one struct"))
 		}
 	}
 	return values, nil
 }
 
+func contains(s []string, e string) bool {
+	for _, a := range s {
+		if a == e {
+			return true
+		}
+	}
+	return false
+}
+
 //gin 서버에 등록 가능한 형태 handler 를 만들어 반환하는 함수입니다.
-func createHandlerFunc(resource reflect.Value, method reflect.Method, args []string) gin.HandlerFunc {
+func createHandlerFunc(resource reflect.Value, method reflect.Method, args []reflect.Type) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		values, err := createValues(c, resource, args)
 		if err != nil {
