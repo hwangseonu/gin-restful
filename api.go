@@ -1,8 +1,6 @@
 package gin_restful
 
 import (
-	"net/http"
-
 	"github.com/gin-gonic/gin"
 )
 
@@ -25,24 +23,11 @@ func (api *API) RegisterResource(path string, resource Resource) {
 func (api *API) RegisterHandlers(engine *gin.Engine) {
 	for path, resource := range api.resources {
 		path = api.Prefix + "/" + path
-		//engine.Handle("GET", path, makeHandler("GET", resource))
-		engine.Handle("POST", path, makeHandler("POST", resource))
-
-	}
-
-}
-
-func makeHandler(_ string, r Resource) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		body := r.RequestBody()
-		if err := c.ShouldBindJSON(body); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		}
-		result, err := r.Create(body, c)
-
-		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		}
-		c.JSON(http.StatusCreated, result)
+		engine.Any(path, func(context *gin.Context) {
+			handleHTTP(resource, context)
+		})
+		engine.Any(path+"/:id", func(context *gin.Context) {
+			handleHTTP(resource, context)
+		})
 	}
 }
