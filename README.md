@@ -2,15 +2,11 @@
 
 A Go library that simplifies and accelerates RESTful API development using the Gin framework. It abstracts away repetitive routing and handler setups, allowing you to easily implement **Create, Read, Update, Delete (CRUD)** functionalities.
 
----
-
 ## Key Features
 
 * **Automatic Routing:** Automatically maps HTTP methods (POST, GET, PUT, DELETE) to the corresponding CRUD functions defined in the `restful.Resource` interface.
 * **Interface-Based Development:** Provides a consistent way to define API resources by simply implementing a predefined interface.
 * **Easy Schema Binding:** The `RequestBody` method allows you to easily define the JSON schema for incoming request bodies.
-
----
 
 ## Getting Started
 
