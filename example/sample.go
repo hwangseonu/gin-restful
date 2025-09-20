@@ -39,9 +39,8 @@ func (r *Sample) Read(id string, _ *gin.Context) (gin.H, int, error) {
 
 	if !ok {
 		return gin.H{}, 404, nil
-	} else {
-		return gin.H{"message": sample.Message}, http.StatusOK, nil
-	}
+	} 
+	return gin.H{"message": sample.Message}, http.StatusOK, nil
 }
 
 func (r *Sample) ReadAll(_ *gin.Context) (gin.H, int, error) {
