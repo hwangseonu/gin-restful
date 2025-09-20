@@ -72,8 +72,7 @@ func main() {
 	engine := gin.Default()
 	api := restful.NewAPI("/api/v1")
 
-	sample := new(Sample)
-	sample.database = make(map[string]SampleSchema)
+	sample := &Sample{make(map[string]SampleSchema)}
 
 	api.RegisterResource("/samples", sample)
 	api.RegisterHandlers(engine)
