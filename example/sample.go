@@ -19,7 +19,10 @@ type Sample struct {
 	database map[string]SampleSchema
 }
 
-func (r *Sample) RequestBody(_ string) any {
+func (r *Sample) RequestBody(method string) any {
+	if method == "GET" {
+		return nil
+	}
 	return new(SampleSchema)
 }
 
@@ -39,7 +42,7 @@ func (r *Sample) Read(id string, _ *gin.Context) (gin.H, int, error) {
 
 	if !ok {
 		return gin.H{}, 404, nil
-	} 
+	}
 	return gin.H{"message": sample.Message}, http.StatusOK, nil
 }
 

@@ -1,6 +1,4 @@
 # gin-restful
-[![Go Reference](https://pkg.go.dev/badge/github.com/hwangseonu/gin-restful.svg)](https://pkg.go.dev/github.com/hwangseonu/gin-restful)
-[![CodeFactor](https://www.codefactor.io/repository/github/hwangseonu/gin-restful/badge)](https://www.codefactor.io/repository/github/hwangseonu/gin-restful)
 
 A Go library that simplifies and accelerates RESTful API development using the Gin framework. It abstracts away repetitive routing and handler setups, allowing you to easily implement **Create, Read, Update, Delete (CRUD)** functionalities.
 

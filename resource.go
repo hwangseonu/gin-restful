@@ -2,6 +2,7 @@ package gin_restful
 
 import (
 	"net/http"
+	"reflect"
 
 	"github.com/gin-gonic/gin"
 )
@@ -20,9 +21,13 @@ func handleHTTP(resource Resource, c *gin.Context) {
 	id := c.Param("id")
 	body := resource.RequestBody(c.Request.Method)
 
-	if err := c.ShouldBindJSON(body); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
+	v := reflect.ValueOf(body)
+
+	if v.IsValid() && !v.IsNil() {
+		if err := c.ShouldBindJSON(body); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
 	}
 
 	var result gin.H
