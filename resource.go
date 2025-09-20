@@ -20,8 +20,9 @@ func handleHTTP(resource Resource, c *gin.Context) {
 	id := c.Param("id")
 	body := resource.RequestBody()
 
-	if err := c.ShouldBindJSON(body); err != nil {
+	if err := c.ShouldBindBodyWithJSON(body); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
 	}
 
 	var result gin.H
