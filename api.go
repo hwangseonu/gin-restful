@@ -22,12 +22,32 @@ func (api *API) RegisterResource(path string, resource Resource) {
 
 func (api *API) RegisterHandlers(engine *gin.Engine) {
 	for path, resource := range api.resources {
-		path = api.Prefix + "/" + path
-		engine.Any(path, func(context *gin.Context) {
-			handleHTTP(resource, context)
+		path = api.Prefix + path
+		handler := gin.HandlerFunc(func(c *gin.Context) {
+			handleHTTP(resource, c)
 		})
-		engine.Any(path+"/:id", func(context *gin.Context) {
-			handleHTTP(resource, context)
-		})
+
+		if resource.Create != nil {
+			engine.POST(path, handler)
+		}
+
+		if resource.ReadAll != nil {
+			engine.GET(path, handler)
+		}
+
+		path = path + "/:id"
+
+		if resource.Read != nil {
+			engine.GET(path, handler)
+		}
+
+		if resource.Update != nil {
+			engine.PUT(path, handler)
+			engine.PATCH(path, handler)
+		}
+
+		if resource.Delete != nil {
+			engine.DELETE(path, handler)
+		}
 	}
 }

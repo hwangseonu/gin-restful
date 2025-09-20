@@ -19,7 +19,7 @@ type Sample struct {
 	database map[string]SampleSchema
 }
 
-func (r *Sample) RequestBody() interface{} {
+func (r *Sample) RequestBody(_ string) any {
 	return new(SampleSchema)
 }
 

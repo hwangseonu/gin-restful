@@ -7,7 +7,7 @@ import (
 )
 
 type Resource interface {
-	RequestBody() interface{}
+	RequestBody(method string) any
 
 	Create(body interface{}, c *gin.Context) (gin.H, int, error)
 	Read(id string, c *gin.Context) (gin.H, int, error)
@@ -18,9 +18,9 @@ type Resource interface {
 
 func handleHTTP(resource Resource, c *gin.Context) {
 	id := c.Param("id")
-	body := resource.RequestBody()
+	body := resource.RequestBody(c.Request.Method)
 
-	if err := c.ShouldBindBodyWithJSON(body); err != nil {
+	if err := c.ShouldBindJSON(body); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
@@ -43,8 +43,16 @@ func handleHTTP(resource Resource, c *gin.Context) {
 			result, status, err = resource.Read(id, c)
 		}
 	case "PUT", "PATCH":
+		if id == "" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "id is required"})
+			return
+		}
 		result, status, err = resource.Update(id, body, c)
 	case "DELETE":
+		if id == "" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "id is required"})
+			return
+		}
 		result, status, err = resource.Delete(id, c)
 	}
 
