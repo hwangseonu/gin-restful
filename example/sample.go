@@ -77,7 +77,7 @@ func main() {
 	sample := &Sample{make(map[string]SampleSchema)}
 
 	api.RegisterResource("/samples", sample)
-	api.RegisterHandlers(engine)
+	api.RegisterHandlers(&engine.RouterGroup)
 
 	e := engine.Run(":8080")
 	if e != nil {
