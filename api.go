@@ -20,7 +20,7 @@ func (api *API) RegisterResource(path string, resource Resource) {
 	api.resources[path] = resource
 }
 
-func (api *API) RegisterHandlers(engine *gin.Engine) {
+func (api *API) RegisterHandlers(router *gin.RouterGroup) {
 	for path, resource := range api.resources {
 		path = api.Prefix + path
 		handler := gin.HandlerFunc(func(c *gin.Context) {
@@ -28,26 +28,26 @@ func (api *API) RegisterHandlers(engine *gin.Engine) {
 		})
 
 		if resource.Create != nil {
-			engine.POST(path, handler)
+			router.POST(path, handler)
 		}
 
 		if resource.ReadAll != nil {
-			engine.GET(path, handler)
+			router.GET(path, handler)
 		}
 
 		path = path + "/:id"
 
 		if resource.Read != nil {
-			engine.GET(path, handler)
+			router.GET(path, handler)
 		}
 
 		if resource.Update != nil {
-			engine.PUT(path, handler)
-			engine.PATCH(path, handler)
+			router.PUT(path, handler)
+			router.PATCH(path, handler)
 		}
 
 		if resource.Delete != nil {
-			engine.DELETE(path, handler)
+			router.DELETE(path, handler)
 		}
 	}
 }
