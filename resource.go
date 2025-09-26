@@ -1,6 +1,7 @@
 package gin_restful
 
 import (
+	"log"
 	"net/http"
 	"reflect"
 
@@ -62,7 +63,8 @@ func handleHTTP(resource Resource, c *gin.Context) {
 	}
 
 	if err != nil {
-		c.JSON(status, gin.H{"error": err.Error()})
+		err = c.Error(err).SetMeta(status)
+		log.Println(err)
 	} else {
 		c.JSON(status, result)
 	}
