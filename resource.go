@@ -63,7 +63,8 @@ func handleHTTP(resource Resource, c *gin.Context) {
 	}
 
 	if err != nil {
-		err = c.AbortWithError(status, err)
+		err = c.Error(err)
+		c.JSON(status, gin.H{"error": err})
 		log.Println(err)
 	} else {
 		c.JSON(status, result)
