@@ -62,5 +62,5 @@ api.AddResource("/items", &ItemResource{})
 
 - All handler methods return `(any, int, error)`
 - Use `sync.RWMutex` for concurrent map/state access in resource structs
-- Package is imported as `restful`
+- Package name is `restful` — no import alias needed
 - Run `go test ./... -v` to verify changes

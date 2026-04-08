@@ -37,7 +37,7 @@ go build -o /tmp/bin ./example/basic/  # Build example (use -o to avoid dir conf
 
 ### Package
 
-Package name is `gin_restful`, conventionally imported as `restful`.
+Package name is `restful`. No import alias needed.
 
 ## Code Conventions
 

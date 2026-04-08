@@ -8,7 +8,7 @@ import (
 	"sync"
 
 	"github.com/gin-gonic/gin"
-	restful "github.com/hwangseonu/gin-restful"
+	"github.com/hwangseonu/gin-restful"
 )
 
 // --- 모델 ---

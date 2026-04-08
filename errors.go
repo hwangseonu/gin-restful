@@ -1,4 +1,4 @@
-package gin_restful
+package restful
 
 // HTTPError represents an HTTP error with a status code and message.
 // When returned from a handler, the framework automatically sends the

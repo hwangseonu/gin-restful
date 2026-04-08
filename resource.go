@@ -1,8 +1,8 @@
-// Package gin_restful provides a Flask-RESTful inspired abstraction over the
+// Package restful provides a Flask-RESTful inspired abstraction over the
 // Gin web framework. Resources are defined by implementing one or more of the
 // HTTP method interfaces (Lister, Getter, Poster, Putter, Patcher, Deleter).
 // Only implemented interfaces are registered as routes.
-package gin_restful
+package restful
 
 import "github.com/gin-gonic/gin"
 

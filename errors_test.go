@@ -1,4 +1,4 @@
-package gin_restful
+package restful
 
 import (
 	"errors"

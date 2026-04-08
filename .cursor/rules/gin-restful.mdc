@@ -38,4 +38,4 @@ api.AddResource("/items", &ItemResource{})
 - Always use `sync.RWMutex` for shared state in resource structs
 - Use `Abort()` for client-facing errors, never raw `fmt.Errorf`
 - Run `go test ./... -v` after changes
-- Package imported as `restful`
+- Package name is `restful` — no import alias needed
