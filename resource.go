@@ -1,60 +1,29 @@
 package gin_restful
 
-import (
-	"net/http"
-	"reflect"
+import "github.com/gin-gonic/gin"
 
-	"github.com/gin-gonic/gin"
-)
+// 각 HTTP 메서드별 독립 인터페이스. 필요한 것만 구현하면 해당 라우트만 등록.
 
-type Resource interface {
-	RequestBody(method string) any
-
-	Create(body interface{}, c *gin.Context) (gin.H, int, error)
-	Read(id string, c *gin.Context) (gin.H, int, error)
-	ReadAll(c *gin.Context) (gin.H, int, error)
-	Update(id string, body interface{}, c *gin.Context) (gin.H, int, error)
-	Delete(id string, c *gin.Context) (gin.H, int, error)
+type Lister interface {
+	List(c *gin.Context) (any, int, error)
 }
 
-func handleHTTP(resource Resource, c *gin.Context) {
-	var result gin.H
-	var status int
-	var err error
+type Getter interface {
+	Get(id string, c *gin.Context) (any, int, error)
+}
 
-	id := c.Param("id")
-	body := resource.RequestBody(c.Request.Method)
-	v := reflect.ValueOf(body)
+type Poster interface {
+	Post(c *gin.Context) (any, int, error)
+}
 
-	if v.IsValid() && !v.IsNil() {
-		if err := c.ShouldBindJSON(body); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-			return
-		}
-	}
+type Putter interface {
+	Put(id string, c *gin.Context) (any, int, error)
+}
 
-	if id == "" {
-		switch c.Request.Method {
-		case "POST":
-			result, status, err = resource.Create(body, c)
-		case "GET":
-			result, status, err = resource.ReadAll(c)
-		}
-	} else {
-		switch c.Request.Method {
-		case "GET":
-			result, status, err = resource.Read(id, c)
-		case "PUT", "PATCH":
-			result, status, err = resource.Update(id, body, c)
-		case "DELETE":
-			result, status, err = resource.Delete(id, c)
-		}
-	}
+type Patcher interface {
+	Patch(id string, c *gin.Context) (any, int, error)
+}
 
-	if err != nil {
-		_ = c.Error(err)
-		c.Status(status)
-	} else {
-		c.JSON(status, result)
-	}
+type Deleter interface {
+	Delete(id string, c *gin.Context) (any, int, error)
 }

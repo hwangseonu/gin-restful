@@ -1,53 +1,69 @@
 package gin_restful
 
 import (
+	"fmt"
+
 	"github.com/gin-gonic/gin"
 )
 
 type API struct {
-	Prefix    string
-	resources map[string]Resource
+	prefix string
+	router gin.IRouter
 }
 
-func NewAPI(prefix string) *API {
-	api := new(API)
-	api.Prefix = prefix
-	api.resources = make(map[string]Resource)
-	return api
+func NewAPI(router gin.IRouter, prefix string) *API {
+	return &API{prefix: prefix, router: router}
 }
 
-func (api *API) RegisterResource(path string, resource Resource) {
-	api.resources[path] = resource
-}
+func (api *API) AddResource(path string, resource any) {
+	fullPath := normalizePath(api.prefix + path)
+	registered := 0
 
-func (api *API) RegisterHandlers(router *gin.RouterGroup) {
-	for path, resource := range api.resources {
-		path = api.Prefix + path
-		handler := gin.HandlerFunc(func(c *gin.Context) {
-			handleHTTP(resource, c)
-		})
+	if r, ok := resource.(Poster); ok {
+		registered++
+		api.router.POST(fullPath, makeHandler(func(c *gin.Context) (any, int, error) {
+			return r.Post(c)
+		}))
+	}
 
-		if resource.Create != nil {
-			router.POST(path, handler)
-		}
+	if r, ok := resource.(Lister); ok {
+		registered++
+		api.router.GET(fullPath, makeHandler(func(c *gin.Context) (any, int, error) {
+			return r.List(c)
+		}))
+	}
 
-		if resource.ReadAll != nil {
-			router.GET(path, handler)
-		}
+	idPath := fullPath + "/:id"
 
-		path = path + "/:id"
+	if r, ok := resource.(Getter); ok {
+		registered++
+		api.router.GET(idPath, makeHandler(func(c *gin.Context) (any, int, error) {
+			return r.Get(c.Param("id"), c)
+		}))
+	}
 
-		if resource.Read != nil {
-			router.GET(path, handler)
-		}
+	if r, ok := resource.(Putter); ok {
+		registered++
+		api.router.PUT(idPath, makeHandler(func(c *gin.Context) (any, int, error) {
+			return r.Put(c.Param("id"), c)
+		}))
+	}
 
-		if resource.Update != nil {
-			router.PUT(path, handler)
-			router.PATCH(path, handler)
-		}
+	if r, ok := resource.(Patcher); ok {
+		registered++
+		api.router.PATCH(idPath, makeHandler(func(c *gin.Context) (any, int, error) {
+			return r.Patch(c.Param("id"), c)
+		}))
+	}
 
-		if resource.Delete != nil {
-			router.DELETE(path, handler)
-		}
+	if r, ok := resource.(Deleter); ok {
+		registered++
+		api.router.DELETE(idPath, makeHandler(func(c *gin.Context) (any, int, error) {
+			return r.Delete(c.Param("id"), c)
+		}))
+	}
+
+	if registered == 0 {
+		panic(fmt.Sprintf("gin-restful: resource at %q implements none of the handler interfaces", path))
 	}
 }
