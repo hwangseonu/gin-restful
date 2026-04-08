@@ -1,0 +1,41 @@
+---
+description: gin-restful library development guide
+globs: ["**/*.go"]
+---
+
+# gin-restful
+
+Flask-RESTful style REST API library for Gin. See AGENTS.md for full details.
+
+## Quick Reference
+
+### Resource Pattern
+Implement only the interfaces you need — only those routes are registered:
+- `Lister` → GET /path
+- `Getter` → GET /path/:id
+- `Poster` → POST /path
+- `Putter` → PUT /path/:id
+- `Patcher` → PATCH /path/:id
+- `Deleter` → DELETE /path/:id
+
+All methods return `(any, int, error)`.
+
+### Request Binding
+- `restful.Bind[T](c)` → returns `(*T, error)`, handle error yourself
+- `restful.MustBind[T](c)` → returns `*T`, auto 400 abort on failure (check nil)
+
+### Error Handling
+- `restful.Abort(status, message)` → structured HTTP error
+- Non-HTTPError errors → 500 with generic message (internal details hidden)
+
+### Registration
+```go
+api := restful.NewAPI(engine, "/api/v1")
+api.AddResource("/items", &ItemResource{})
+```
+
+### Rules
+- Always use `sync.RWMutex` for shared state in resource structs
+- Use `Abort()` for client-facing errors, never raw `fmt.Errorf`
+- Run `go test ./... -v` after changes
+- Package imported as `restful`
