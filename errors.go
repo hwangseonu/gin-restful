@@ -7,6 +7,8 @@ package gin_restful
 type HTTPError struct {
 	Status  int    `json:"-"`
 	Message string `json:"message"`
+	Code    string `json:"code,omitempty"`
+	Details any    `json:"details,omitempty"`
 }
 
 // Error implements the error interface.
@@ -14,10 +16,35 @@ func (e *HTTPError) Error() string {
 	return e.Message
 }
 
+// ErrorOption configures optional fields on HTTPError.
+type ErrorOption func(*HTTPError)
+
+// WithCode sets an application-specific error code on the HTTPError.
+func WithCode(code string) ErrorOption {
+	return func(e *HTTPError) {
+		e.Code = code
+	}
+}
+
+// WithDetails sets additional details on the HTTPError.
+// Details can be any JSON-serializable value (map, slice, struct, etc.).
+func WithDetails(details any) ErrorOption {
+	return func(e *HTTPError) {
+		e.Details = details
+	}
+}
+
 // Abort creates an HTTPError with the given status code and message.
-// Use this in handlers to return structured error responses:
+// Optional ErrorOption arguments can set Code and Details fields:
 //
-//	return nil, 0, restful.Abort(404, "not found")
-func Abort(status int, message string) *HTTPError {
-	return &HTTPError{Status: status, Message: message}
+//	restful.Abort(400, "validation failed",
+//	    restful.WithCode("VALIDATION_ERROR"),
+//	    restful.WithDetails(map[string]string{"name": "required"}),
+//	)
+func Abort(status int, message string, opts ...ErrorOption) *HTTPError {
+	err := &HTTPError{Status: status, Message: message}
+	for _, opt := range opts {
+		opt(err)
+	}
+	return err
 }

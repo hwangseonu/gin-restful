@@ -3,6 +3,7 @@ package gin_restful
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -292,6 +293,90 @@ func TestNewAPI_PathNormalization(t *testing.T) {
 	w := doRequest(engine, "GET", "/api/items", "")
 	if w.Code != http.StatusOK {
 		t.Errorf("GET /api/items: expected 200, got %d (path normalization issue)", w.Code)
+	}
+}
+
+// --- tests: custom error handler ---
+
+func TestWithErrorHandler_CustomFormat(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	engine := gin.New()
+	api := NewAPI(engine, "/api",
+		WithErrorHandler(func(c *gin.Context, err error, status int) {
+			var httpErr *HTTPError
+			if errors.As(err, &httpErr) {
+				c.AbortWithStatusJSON(httpErr.Status, gin.H{
+					"error": gin.H{
+						"message": httpErr.Message,
+						"code":    httpErr.Code,
+					},
+				})
+				return
+			}
+			c.AbortWithStatusJSON(500, gin.H{"error": gin.H{"message": "server error"}})
+		}),
+	)
+	api.AddResource("/items", &errorResource{})
+
+	w := doRequest(engine, "GET", "/api/items/1", "")
+	if w.Code != http.StatusNotFound {
+		t.Errorf("expected 404, got %d", w.Code)
+	}
+
+	var resp map[string]map[string]string
+	if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("failed to parse response: %v", err)
+	}
+	if resp["error"]["message"] != "not found" {
+		t.Errorf("expected custom error format with 'not found', got %v", resp)
+	}
+}
+
+func TestWithErrorHandler_DefaultWhenNotSet(t *testing.T) {
+	engine := setupRouter("/items", &errorResource{})
+
+	w := doRequest(engine, "GET", "/api/items/1", "")
+	if w.Code != http.StatusNotFound {
+		t.Errorf("expected 404, got %d", w.Code)
+	}
+
+	var resp map[string]string
+	if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("failed to parse response: %v", err)
+	}
+	if resp["message"] != "not found" {
+		t.Errorf("expected default format with 'message', got %v", resp)
+	}
+}
+
+// --- tests: HTTPError with Code and Details in response ---
+
+type detailedErrorResource struct{}
+
+func (r *detailedErrorResource) Get(id string, c *gin.Context) (any, int, error) {
+	return nil, 0, Abort(422, "validation failed",
+		WithCode("VALIDATION_ERROR"),
+		WithDetails(gin.H{"field": "name is required"}),
+	)
+}
+
+func TestHTTPError_CodeAndDetails_InResponse(t *testing.T) {
+	engine := setupRouter("/items", &detailedErrorResource{})
+
+	w := doRequest(engine, "GET", "/api/items/1", "")
+	if w.Code != 422 {
+		t.Errorf("expected 422, got %d", w.Code)
+	}
+
+	var resp map[string]any
+	if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("failed to parse response: %v", err)
+	}
+	if resp["code"] != "VALIDATION_ERROR" {
+		t.Errorf("expected code 'VALIDATION_ERROR', got %v", resp["code"])
+	}
+	if resp["details"] == nil {
+		t.Error("expected non-nil details in response")
 	}
 }
 

@@ -9,10 +9,18 @@ import (
 )
 
 func makeHandler(fn func(c *gin.Context) (any, int, error)) gin.HandlerFunc {
+	return makeHandlerWithErrorHandler(fn, nil)
+}
+
+func makeHandlerWithErrorHandler(fn func(c *gin.Context) (any, int, error), errHandler ErrorHandlerFunc) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		result, status, err := fn(c)
 		if err != nil {
-			handleError(c, err, status)
+			if errHandler != nil {
+				errHandler(c, err, status)
+			} else {
+				handleError(c, err, status)
+			}
 			return
 		}
 		if status == http.StatusNoContent {
