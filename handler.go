@@ -41,5 +41,8 @@ func normalizePath(path string) string {
 	for strings.Contains(path, "//") {
 		path = strings.ReplaceAll(path, "//", "/")
 	}
+	if len(path) > 1 {
+		path = strings.TrimRight(path, "/")
+	}
 	return path
 }

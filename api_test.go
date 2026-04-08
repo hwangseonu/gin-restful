@@ -294,3 +294,16 @@ func TestNewAPI_PathNormalization(t *testing.T) {
 		t.Errorf("GET /api/items: expected 200, got %d (path normalization issue)", w.Code)
 	}
 }
+
+func TestNewAPI_TrailingSlashNormalization(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	engine := gin.New()
+	api := NewAPI(engine, "/api")
+	api.AddResource("/items/", &readOnlyResource{})
+
+	// Trailing slash should be stripped — no 301 redirect
+	w := doRequest(engine, "GET", "/api/items", "")
+	if w.Code != http.StatusOK {
+		t.Errorf("GET /api/items: expected 200, got %d (trailing slash issue)", w.Code)
+	}
+}

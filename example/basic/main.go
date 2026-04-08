@@ -4,6 +4,7 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"sync"
 
 	"github.com/gin-gonic/gin"
 	restful "github.com/hwangseonu/gin-restful"
@@ -13,13 +14,16 @@ type SampleSchema struct {
 	Message string `json:"message" binding:"required"`
 }
 
-var offset = 0
-
 type Sample struct {
+	mu       sync.RWMutex
 	database map[string]SampleSchema
+	nextID   int
 }
 
 func (r *Sample) List(c *gin.Context) (any, int, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
 	samples := make(map[string]gin.H)
 	for k, v := range r.database {
 		samples[k] = gin.H{"message": v.Message}
@@ -28,6 +32,9 @@ func (r *Sample) List(c *gin.Context) (any, int, error) {
 }
 
 func (r *Sample) Get(id string, c *gin.Context) (any, int, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
 	sample, ok := r.database[id]
 	if !ok {
 		return nil, 0, restful.Abort(http.StatusNotFound, "sample not found")
@@ -40,8 +47,12 @@ func (r *Sample) Post(c *gin.Context) (any, int, error) {
 	if err != nil {
 		return nil, 0, restful.Abort(http.StatusBadRequest, err.Error())
 	}
-	id := strconv.Itoa(offset)
-	offset++
+
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	id := strconv.Itoa(r.nextID)
+	r.nextID++
 	r.database[id] = *body
 	return gin.H{"message": body.Message}, http.StatusCreated, nil
 }
@@ -51,11 +62,18 @@ func (r *Sample) Put(id string, c *gin.Context) (any, int, error) {
 	if err != nil {
 		return nil, 0, restful.Abort(http.StatusBadRequest, err.Error())
 	}
+
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
 	r.database[id] = *body
 	return nil, http.StatusNoContent, nil
 }
 
 func (r *Sample) Delete(id string, c *gin.Context) (any, int, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
 	delete(r.database, id)
 	return nil, http.StatusNoContent, nil
 }
